@@ -1,23 +1,63 @@
-"""
-URL configuration for config project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/6.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
-
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
+from rest_framework import routers
+
+from support.views import AdminProjectViewset, UserAPIView, ProjectViewset
+
+router = routers.SimpleRouter()
+router.register("project", ProjectViewset, basename="project")
+router.register("admin/project", AdminProjectViewset, basename="admin_project")
+
+# !! QUESTION PHILOSOPHIQUE !!
+# on peut implémenter 2 stratégies de nommage pour les endpoints
+# exemple pour ajouter un commentaire
+# URL "à plat" : POST /comments/ (JSON envoyé : {"project": 123, "content": "Super projet !"})
+# URL "imbriquée" : POST /projects/1/comments/ (nécessite d'installer la bibliothèque drf-nested-routers)
+# Problème de conflit de version :
+# Python (3.9, 3.10, 3.11, 3.12, 3.13)
+# Django (4.2, 5.0, 5.1, 5.2)
+# Django REST Framework (3.14, 3.15, 3.16)
+# choix de ne pas utiliser drf-nested-routers car on n'en parle pas dans le cours
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path('api-auth/', include('rest_framework.urls')),
+    path('api/user/', UserAPIView.as_view()),
+    path("api/", include(router.urls))
+
+    # création d'un nouvel utilisateur => doit être authentifié en tant que is_staff
+    # path("api/sign-up/", "", name=""),
+
+    # gestion des projets
+    # verbe HTTP POST : création d'un projet => doit être authentifié
+    # verbe HTTP GET : lecture d'un projet => doit être authentifié et contributeur du projet
+    # verbe HTTP PUT : mise à jour total d'un projet => doit être authentifié et auteur du projet
+    # verbe HTTP PATCH : mise à jour partielle d'un projet => doit être authentifié et auteur du projet
+    # verbe HTTP DELETE : supression d'un projet => doit être authentifié en tant que is_staff
+    # path("api/project/", "", name=""),
+
+    # gestion des contributeurs
+    # verbe HTTP POST : création d'un contributeur => doit être authentifié et auteur du projet
+    # verbe HTTP GET : lecture des contributeurs => doit être authentifié et auteur du projet
+    # verbe HTTP PUT : sans objet
+    # verbe HTTP PATCH : sans objet
+    # verbe HTTP DELETE : supression d'un projet => doit être authentifié en tant que is_staff
+    # path("api/contributor/", "", name=""),
+
+    # gestion des problèmes
+    # verbe HTTP POST : création d'un problème => doit être authentifié et contributeur du projet
+    # verbe HTTP GET : lecture d'un problème => doit être authentifié et contributeur du projet
+    # verbe HTTP PUT : mise à jour total d'un problème => doit être authentifié et auteur du problème
+    # verbe HTTP PATCH : mise à jour partielle d'un problème => doit être authentifié et auteur du problème
+    # verbe HTTP DELETE : supression d'un problème => doit être authentifié et auteur du problème
+    # path("api/issue/", "", name=""),
+
+    # gestion des commentaires
+    # verbe HTTP POST : création d'un commentaire => doit être authentifié et contributeur du projet
+    # verbe HTTP GET : lecture d'un commentaire => doit être authentifié et contributeur du projet
+    # verbe HTTP PUT : mise à jour total d'un commentaire => doit être authentifié et auteur du commentaire
+    # verbe HTTP PATCH : mise à jour partielle d'un commentaire => doit être authentifié et auteur du commentaire
+    # verbe HTTP DELETE : supression d'un commentaire => doit être authentifié et auteur du commentaire
+    # path("api/comment/", "", name=""),
+
 ]

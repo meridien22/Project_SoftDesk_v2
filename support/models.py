@@ -96,7 +96,11 @@ class Issue(models.Model):
         choices=Progression.choices,
         default='TODO'
     )
-    project = models.ForeignKey(Project, on_delete=models.CASCADE)
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        related_name="issues"
+    )
     time_created = models.DateTimeField(auto_now_add=True)
 
 
@@ -107,7 +111,11 @@ class Comment(models.Model):
         editable=False
     )
     description = models.CharField(max_length=2048, blank=True)
-    issue = models.ForeignKey(Issue, on_delete=models.CASCADE)
+    issue = models.ForeignKey(
+        Issue,
+        on_delete=models.CASCADE,
+        related_name="comments"
+    )
     # l'utilisateur doit aussi donner un lien vers une issue, ! à implémenter !
     time_created = models.DateTimeField(auto_now_add=True)
     author = models.ForeignKey(
