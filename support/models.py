@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 import uuid
+from client.models import Client
 
 
 class Project(models.Model):
@@ -19,15 +20,15 @@ class Project(models.Model):
     time_created = models.DateTimeField(auto_now_add=True)
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+        on_delete=models.CASCADE,
+        related_name="user_projects",
     )
     contributors = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         through="ProjectContributors",
         related_name="contributions",
     )
+
 
 # Le champ contributors : sert à aller du Projet vers les Utilisateurs (project.contributors).
 # Le related_name="contributions" : sert à aller de l'Utilisateur vers les Projets (user.contributions).
@@ -78,16 +79,12 @@ class Issue(models.Model):
     priority = models.CharField(max_length=30, choices=Priority.choices)
     attribution = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+        on_delete=models.CASCADE,
         related_name="assigned_issues"
     )
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+        on_delete=models.CASCADE,
         related_name="created_issues"
     )
     balise = models.CharField(max_length=30, choices=Balise.choices)
@@ -120,9 +117,7 @@ class Comment(models.Model):
     time_created = models.DateTimeField(auto_now_add=True)
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True
+        on_delete=models.CASCADE,
     )
 
 

@@ -3,7 +3,8 @@ from django.urls import path, include
 from rest_framework import routers
 from rest_framework_simplejwt. views import TokenObtainPairView, TokenRefreshView
 
-from support.views import AdminProjectViewset, UserAPIView, ProjectViewset
+from support.views import AdminProjectViewset, ProjectViewset
+from authentication.views import UserAPIView
 
 router = routers.SimpleRouter()
 router.register("project", ProjectViewset, basename="project")
