@@ -21,12 +21,12 @@ class Project(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
-        blank=True
+        blank=True,
     )
     contributors = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         through="ProjectContributors",
-        related_name="contributions"
+        related_name="contributions",
     )
 
 # Le champ contributors : sert à aller du Projet vers les Utilisateurs (project.contributors).
