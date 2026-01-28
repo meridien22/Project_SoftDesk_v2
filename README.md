@@ -18,7 +18,7 @@ poetry run django-admin startproject config .
 
 # Pour la suite
 poetry run python manage.py migrate
-poetry run python manage.py runserver
+
 
 poetry run python manage.py startapp authentication
 poetry run python manage.py startapp support

@@ -4,6 +4,12 @@ import uuid
 from client.models import Client
 
 
+class ActiveProjectManager(models.Manager):
+    def get_queryset(self):
+        # On filtre par défaut sur is_active=True
+        return super().get_queryset().filter(is_active=True)
+
+
 class Project(models.Model):
 
 
@@ -28,6 +34,12 @@ class Project(models.Model):
         through="ProjectContributors",
         related_name="contributions",
     )
+    is_active = models.BooleanField(default=True)
+
+    # Le manager par défaut employé par le modèle
+    objects = ActiveProjectManager()
+    # Le manager à employer si on veut voir tout les projets y compris les inactifs
+    all_objects = models.Manager()
 
 
 # Le champ contributors : sert à aller du Projet vers les Utilisateurs (project.contributors).

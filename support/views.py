@@ -1,20 +1,24 @@
 from rest_framework.viewsets import (
-    ModelViewSet,
     ReadOnlyModelViewSet,
+    ModelViewSet,
 )
-
+from rest_framework import status
+from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
-
-
-from support.models import Project
-
+from rest_framework.response import Response
+from support.models import (
+    Project,
+    Comment,
+    Issue,
+)
 from support.serializers import (
     ProjectDetailSerializer,
     ProjectListSerializer,
+    IssueSerializer,
 )
-
 from support.permissions import (
-    IsAuthenticated
+    IsAuthenticated,
+    IsStaff
 )
 
 UserModel = get_user_model()
@@ -37,9 +41,17 @@ class ProjectViewset(MultipleSerializerMixin, ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+
         user = self.request.user
-        queryset = Project.objects.filter(author__client=user.client)
-        type = self.request.GET.get("type")
+        queryset = Project.objects.filter(
+            author__client=user.client
+        ).prefetch_related(
+            'contributors',
+            'issues__comments',
+            'issues__comments__author'
+        )
+
+        type = self.request.query_params.get('type')
 
         if type is not None:
             queryset = queryset.filter(type=type)
@@ -49,22 +61,57 @@ class ProjectViewset(MultipleSerializerMixin, ReadOnlyModelViewSet):
 
 # class ProjectAPIView(APIView):
 
-#     def get(self, *args, **kwargs):
-#         projects = Project.objects.all()
-#         serializer = ProjectSerializer(projects, many=True)
-#         return Response(serializer.data)
+#     def post(self, *args, **kwargs):
+#         serializer = ProjectListSerializer(data=request.data)
+#         if serializer.is_valid():
+#             serializer.save(author=request.user)
+#             return Response(serializer.data, status=201)
+#         return Response(serializer.errors, status=400)
 
-# Accepte un paramètre type pour filtrer les projets suivant leurs types
-class AdminProjectViewset(MultipleSerializerMixin, ModelViewSet):
 
+class AdminProjectViewset(ModelViewSet):
+    
     serializer_class = ProjectListSerializer
-    detail_serializer_class = ProjectDetailSerializer
+    permission_classes = [IsStaff]
 
     def get_queryset(self):
-        queryset = Project.objects.all()
-        type = self.request.GET.get("type")
 
-        if type is not None:
-            queryset = queryset.filter(type=type)
-
+        user = self.request.user
+        queryset = Project.objects.filter(author__client=user.client)
         return queryset
+    
+    def perform_create(self, serializer):
+
+        project = serializer.save(author=self.request.user)
+        project.contributors.add(self.request.user)
+    
+    def perform_destroy(self, instance):
+
+        instance.is_active = False
+        instance.save()
+
+
+class AdminIssueViewset(ModelViewSet):
+
+    serializer_class = IssueSerializer
+    permission_classes = [IsStaff]
+
+    def get_queryset(self):
+
+        user = self.request.user
+        queryset = Comment.objects.filter(
+            author__client=user.client,
+            project_id=self.request.query_params.get('project_id')
+        )
+        return queryset
+    
+    def list(self, request, *args, **kwargs):
+        """Permet de rendre obligatoire la paramètre project_id dans l'URL"""
+
+        project_id = request.query_params.get('project_id')
+        if not project_id:
+            return Response(
+                {"detail": "Le paramètre 'project_id' est obligatoire pour lister les problèmes."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return super().list(request, *args, **kwargs)

@@ -298,6 +298,11 @@ class Command(BaseCommand):
                     project = project,
                 )
 
+                ProjectContributors.objects.create(
+                    contributor = self.bob_user,
+                    project = project,
+                )
+
                 for issue_data in project_data["issues"]:
                     issue = Issue.objects.create(
                         name=issue_data["name"],

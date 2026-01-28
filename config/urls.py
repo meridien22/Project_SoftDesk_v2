@@ -3,12 +3,17 @@ from django.urls import path, include
 from rest_framework import routers
 from rest_framework_simplejwt. views import TokenObtainPairView, TokenRefreshView
 
-from support.views import AdminProjectViewset, ProjectViewset
+from support.views import (
+    ProjectViewset, 
+    AdminProjectViewset,
+    AdminIssueViewset
+)
 from authentication.views import UserAPIView
 
 router = routers.SimpleRouter()
 router.register("project", ProjectViewset, basename="project")
 router.register("admin/project", AdminProjectViewset, basename="admin_project")
+router.register("admin/issue", AdminIssueViewset, basename="admin_issue")
 
 # !! QUESTION PHILOSOPHIQUE !!
 # on peut implémenter 2 stratégies de nommage pour les endpoints
