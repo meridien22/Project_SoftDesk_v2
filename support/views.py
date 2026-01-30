@@ -14,11 +14,16 @@ from support.models import (
 from support.serializers import (
     ProjectDetailSerializer,
     ProjectListSerializer,
-    IssueSerializer,
+    IssueAdminSerializer,
 )
 from support.permissions import (
     IsAuthenticated,
     IsStaff
+)
+
+from rest_framework.exceptions import (
+    ValidationError,
+    NotFound
 )
 
 UserModel = get_user_model()
@@ -44,8 +49,9 @@ class ProjectViewset(MultipleSerializerMixin, ReadOnlyModelViewSet):
 
         user = self.request.user
         queryset = Project.objects.filter(
-            author__client=user.client
-        ).prefetch_related(
+            author__client=user.client,
+            contributors=user,
+        ).distinct().prefetch_related(
             'contributors',
             'issues__comments',
             'issues__comments__author'
@@ -93,25 +99,55 @@ class AdminProjectViewset(ModelViewSet):
 
 class AdminIssueViewset(ModelViewSet):
 
-    serializer_class = IssueSerializer
+    serializer_class = IssueAdminSerializer
     permission_classes = [IsStaff]
 
     def get_queryset(self):
 
+        raise_project_id = False
+        # si on est dans une action 'list' le project_id doit être dans l'URL
+        if self.action == 'list':
+            if not self.request.query_params.get('project_id'):
+                raise_project_id = True
+        # sinon il doit être dans les data
+        else:
+            if 'project_id' not in self.request.data:
+                raise_project_id = True
+
+        if raise_project_id:
+            raise ValidationError({"detail": "Le paramètre d'URL 'project_id' est obligatoire."})
+        
+
+
+
         user = self.request.user
-        queryset = Comment.objects.filter(
+        # filtre de base, s'applique aux actions list, retrieve, create, update, partial_update er destroy
+        queryset = Issue.objects.filter(
             author__client=user.client,
-            project_id=self.request.query_params.get('project_id')
+            project__is_active=True,
         )
+
+        # filtre qui ne va s'appliquer que sur l'action list
+        if self.action == 'list':
+            project_id = self.request.query_params.get('project_id')
+            queryset = queryset.filter(project_id=project_id)
+            if not queryset.exists():
+                raise NotFound({"detail": "Impossible de trouver le projet demandé."})
+        
         return queryset
     
-    def list(self, request, *args, **kwargs):
-        """Permet de rendre obligatoire la paramètre project_id dans l'URL"""
+    def raise_if_no_projecy_id(self, request):
+        """Lève une exception si le paramètre project_id n'est pas présent dans l'URL"""
+        if not request.query_params.get('project_id'):
+            raise ValidationError({"detail": "Le paramètre d'URL 'project_id' est obligatoire."})
 
-        project_id = request.query_params.get('project_id')
-        if not project_id:
-            return Response(
-                {"detail": "Le paramètre 'project_id' est obligatoire pour lister les problèmes."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        return super().list(request, *args, **kwargs)
+    
+    # def list(self, request, *args, **kwargs):
+    #     """methode HTTP GET"""
+    #     self.raise_if_no_projecy_id(request)
+    #     return super().list(request, *args, **kwargs)
+    
+    # def create(self, request, *args, **kwargs):
+    #     """methode HTTP POST"""
+    #     self.raise_if_no_projecy_id(request)
+    #     return super().create(request, *args, **kwargs)

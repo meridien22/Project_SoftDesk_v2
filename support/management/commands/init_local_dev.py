@@ -294,12 +294,7 @@ class Command(BaseCommand):
                 )
 
                 ProjectContributors.objects.create(
-                    contributor = self.alicia_user,
-                    project = project,
-                )
-
-                ProjectContributors.objects.create(
-                    contributor = self.bob_user,
+                    contributor = self.get_user(project_data["author"]),
                     project = project,
                 )
 
