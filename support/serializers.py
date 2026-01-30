@@ -53,6 +53,40 @@ class IssueSerializer(serializers.ModelSerializer):
         ]
 
 
+class CommentAdminSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Comment
+        fields = [
+            "id",
+            "description",
+            "issue",
+        ]
+    validators = [
+            serializers.UniqueTogetherValidator(
+                queryset=Comment.objects.all(),
+                fields=['description', 'issue'],
+                message="Un commentaire avec ce nom existe déjà dans ce problème."
+            )
+    ]
+
+    def validate_issue(self, value):
+        client = self.context['request'].user.client
+        is_valid = Issue.objects.filter(
+            # le problème doit exister
+            id=value.id,
+            # il doit être un des projets du clients
+            project__author__client=client,
+            # l'utilisateur doit être contributeur du projet
+            project__contributors=self.context['request'].user,
+        ).exists()
+        if not is_valid:
+            raise serializers.ValidationError("Référence inconnue")
+
+        return value   
+
+
+
 class IssueAdminSerializer(serializers.ModelSerializer):
 
 
@@ -64,7 +98,6 @@ class IssueAdminSerializer(serializers.ModelSerializer):
             "description",
             "priority",
             "attribution",
-            "author",
             "balise",
             "progression",
             "project",
@@ -84,7 +117,10 @@ class IssueAdminSerializer(serializers.ModelSerializer):
             project = instance.project
         else:
             request = self.context.get('request')
-            project_id = request.query_params.get('project_id')
+            project_id = (
+                request.query_params.get('project') or 
+                request.data.get('project')
+            )
             project = Project.objects.filter(id=project_id).first()
 
         if project is not None:
@@ -92,11 +128,6 @@ class IssueAdminSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("L'utilisateur n'est pas contributeur")
         else:
             raise serializers.ValidationError("Le projet est invalide.")
-
-    def validate_author(self, value):
-        # value contien déjà l'objet user qui a été initialisé par le framework
-        self.raise_if_not_contributor(self.instance, value.id)
-        return value
     
     def validate_attribution(self, value):
         # value contien déjà l'objet user qui a été initialisé par le framework
@@ -116,13 +147,7 @@ class IssueAdminSerializer(serializers.ModelSerializer):
         if not is_valid:
             raise serializers.ValidationError("Référence inconnue")
 
-        return value
-    
-    def validate(self, data):
-
-        if 'project' not in data or (data.get("project") == "" or data.get("project")  is None):
-            raise serializers.ValidationError({"name": "Ce champ est obligatoire."})
-    
+        return value    
     
 
 class ProjectListSerializer(serializers.ModelSerializer):

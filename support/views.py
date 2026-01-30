@@ -15,6 +15,7 @@ from support.serializers import (
     ProjectDetailSerializer,
     ProjectListSerializer,
     IssueAdminSerializer,
+    CommentAdminSerializer
 )
 from support.permissions import (
     IsAuthenticated,
@@ -100,54 +101,82 @@ class AdminProjectViewset(ModelViewSet):
 class AdminIssueViewset(ModelViewSet):
 
     serializer_class = IssueAdminSerializer
-    permission_classes = [IsStaff]
+    permission_classes = [IsAuthenticated]
+
+    def initial(self, request, *args, **kwargs):
+        """Vérifie la présence de project selon l'action demandée."""
+        super().initial(request, *args, **kwargs)
+
+        if self.action == "list":
+            if not request.query_params.get("project"):
+                raise ValidationError({
+                    "detail": "Le paramètre d'URL 'project' est requis pour lister les issues."
+                })
+        elif self.action in ["create", "update", "partial_update", "retrieve"]:
+            if 'project' not in request.data:
+                raise ValidationError({
+                    "project": "Ce champ est obligatoire dans le corps de la requête."
+                })
 
     def get_queryset(self):
-
-        raise_project_id = False
-        # si on est dans une action 'list' le project_id doit être dans l'URL
-        if self.action == 'list':
-            if not self.request.query_params.get('project_id'):
-                raise_project_id = True
-        # sinon il doit être dans les data
-        else:
-            if 'project_id' not in self.request.data:
-                raise_project_id = True
-
-        if raise_project_id:
-            raise ValidationError({"detail": "Le paramètre d'URL 'project_id' est obligatoire."})
-        
-
-
 
         user = self.request.user
         # filtre de base, s'applique aux actions list, retrieve, create, update, partial_update er destroy
         queryset = Issue.objects.filter(
-            author__client=user.client,
+            author=user,
             project__is_active=True,
         )
 
-        # filtre qui ne va s'appliquer que sur l'action list
-        if self.action == 'list':
-            project_id = self.request.query_params.get('project_id')
+        project_id = (
+                    self.request.query_params.get('project') or 
+                    self.request.data.get('project')
+        )
+        if project_id:
             queryset = queryset.filter(project_id=project_id)
-            if not queryset.exists():
-                raise NotFound({"detail": "Impossible de trouver le projet demandé."})
         
         return queryset
     
-    def raise_if_no_projecy_id(self, request):
-        """Lève une exception si le paramètre project_id n'est pas présent dans l'URL"""
-        if not request.query_params.get('project_id'):
-            raise ValidationError({"detail": "Le paramètre d'URL 'project_id' est obligatoire."})
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
 
+
+class AdminCommentViewset(ModelViewSet):
+
+    serializer_class = CommentAdminSerializer
+    permission_classes = [IsAuthenticated]
+
+    def initial(self, request, *args, **kwargs):
+        """Vérifie la présence de issue selon l'action demandée."""
+        super().initial(request, *args, **kwargs)
+
+        if self.action == "list":
+            if not request.query_params.get("issue"):
+                raise ValidationError({
+                    "detail": "Le paramètre d'URL 'issue' est requis pour lister les commentaires."
+                })
+        elif self.action in ["create", "update", "partial_update", "retrieve"]:
+            if 'issue' not in request.data:
+                raise ValidationError({
+                    "issue": "Ce champ est obligatoire dans le corps de la requête."
+                })
+            
+    def get_queryset(self):
+
+        user = self.request.user
+        # filtre de base, s'applique aux actions list, retrieve, create, update, partial_update er destroy
+        queryset = Comment.objects.filter(
+            author=user,
+            issue__project__is_active=True,
+        )
+
+        issue_id = (
+                    self.request.query_params.get('issue') or 
+                    self.request.data.get('issue')
+        )
+        if issue_id:
+            queryset = queryset.filter(issue_id=issue_id)
+        
+        return queryset
     
-    # def list(self, request, *args, **kwargs):
-    #     """methode HTTP GET"""
-    #     self.raise_if_no_projecy_id(request)
-    #     return super().list(request, *args, **kwargs)
-    
-    # def create(self, request, *args, **kwargs):
-    #     """methode HTTP POST"""
-    #     self.raise_if_no_projecy_id(request)
-    #     return super().create(request, *args, **kwargs)
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)

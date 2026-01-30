@@ -6,14 +6,19 @@ from rest_framework_simplejwt. views import TokenObtainPairView, TokenRefreshVie
 from support.views import (
     ProjectViewset, 
     AdminProjectViewset,
-    AdminIssueViewset
+    AdminIssueViewset,
+    AdminCommentViewset,
 )
-from authentication.views import UserAPIView
+from authentication.views import (
+    UserAPIView,
+    ProjectChangeAuthorView,
+)
 
 router = routers.SimpleRouter()
 router.register("project", ProjectViewset, basename="project")
 router.register("admin/project", AdminProjectViewset, basename="admin_project")
 router.register("admin/issue", AdminIssueViewset, basename="admin_issue")
+router.register("admin/comment", AdminCommentViewset, basename="admin_comment")
 
 # !! QUESTION PHILOSOPHIQUE !!
 # on peut implémenter 2 stratégies de nommage pour les endpoints
@@ -31,8 +36,9 @@ urlpatterns = [
     path('api-auth/', include('rest_framework.urls')),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('api/user/', UserAPIView.as_view()),
-    path("api/", include(router.urls))
+    path('api/user/', UserAPIView.as_view(), name="user"),
+    path("api/", include(router.urls)),
+    path('api/admin/capacity/<int:project_id>/project_change_author/', ProjectChangeAuthorView.as_view(), name='project_change_author'),
 
     # création d'un nouvel utilisateur => doit être authentifié en tant que is_staff
     # path("api/sign-up/", "", name=""),
