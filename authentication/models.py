@@ -5,9 +5,9 @@ from client.models import Client
 
 class User(AbstractUser):
     date_birth = models.DateField(verbose_name="Date de naissance")
-    can_be_contacted = models.BooleanField(null=True)
-    can_data_be_collected = models.BooleanField(null=True)
-    can_data_be_shared = models.BooleanField(null=True)
+    can_be_contacted = models.BooleanField(default=False)
+    can_data_be_collected = models.BooleanField(default=False)
+    can_data_be_shared = models.BooleanField(default=False)
     client = models.ForeignKey(
         Client,
         on_delete=models.CASCADE,

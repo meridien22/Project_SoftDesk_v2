@@ -2,7 +2,10 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from authentication.models import User
-from support.models import Project
+from support.models import Project, ProjectContributors
+from authentication.validators import MinAgeValidator
+
+from datetime import date
 
 UserModel = get_user_model()
 
@@ -11,10 +14,20 @@ class UserInputSerializer(serializers.ModelSerializer):
     # Avec ModelSerializer, le check "username unique" est ajouté automatiquement par
     # Django REST Framework car il lit les contraintes du modèle.
 
+    date_birth = serializers.DateField(validators=[MinAgeValidator(15)])
 
     class Meta:
+
         model = UserModel
-        fields = ['username', 'password', 'date_birth', 'client']
+        fields = [
+            "username",
+            "password",
+            "date_birth",
+            "client",
+            "can_be_contacted",
+            "can_data_be_collected",
+            "can_data_be_shared",
+        ]
         extra_kwargs = {
             # En sortie (Lecture) : Lorsque l'API renvoie les informations de
             # l'utilisateur (en format JSON), le champ password est totalement exclu
@@ -24,9 +37,40 @@ class UserInputSerializer(serializers.ModelSerializer):
             'password': {'write_only': True}
         }
 
+
     def create(self, validated_data):
         # utiliser create_user au lieu de create permet de hacher le mot de passe
         return User.objects.create_user(**validated_data)
+
+
+class UserUpdateSerializer(serializers.ModelSerializer):
+
+    date_birth = serializers.DateField(validators=[MinAgeValidator(15)])
+    # cela permet de transmettre le client pour que l'on puisse faire le contrôle
+    # d'unicité du username mais sans laisser la possibilité de la modifier
+    client = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+
+        model = UserModel
+        fields = [
+            "username",
+            "date_birth",
+            "can_be_contacted",
+            "can_data_be_collected",
+            "can_data_be_shared",
+            "client",
+        ]
+        validators = [
+            serializers.UniqueTogetherValidator(
+                queryset=UserModel.objects.all(),
+                fields=['username', 'client'],
+                message="Un utilisateur avec ce nom existe déjà."
+            )
+        ]
+
+
+    
     
 
 class ChangeProjectAuthorSerializer(serializers.ModelSerializer):
@@ -46,3 +90,122 @@ class ChangeProjectAuthorSerializer(serializers.ModelSerializer):
             self.fields['author'].queryset = User.objects.filter(
                 client=request.user.client
             )
+
+
+class AddProjectContributorSerializer(serializers.ModelSerializer):
+
+
+    class Meta:
+        model = ProjectContributors
+        fields = ["contributor", "project"]
+
+
+    def validate(self, data):
+
+        request = self.context.get('request')
+
+        if not request:
+            raise serializers.ValidationError("Object request manquant.")
+        else:
+            project_id = request.data.get('project')
+            contributor_id = request.data.get('contributor')
+            user = request.user
+
+        # Le projet doit exister dans les projets du client
+        existing_project = Project.objects.filter(
+            author__client=user.client,
+            id=project_id,
+        ).exists()
+        if not existing_project :
+            raise serializers.ValidationError("Référence projet incorrecte.")
+            
+        # Le contributeur ne doit pas déjà être contributeur du projet
+        existing_contributor = ProjectContributors.objects.filter(
+            contributor_id=contributor_id,
+            project_id=project_id,
+        ).exists()
+        if existing_contributor :
+            raise serializers.ValidationError("Contributeur déjà associé au projet.")
+
+        # Le contributeur doit être un utilisateur du client
+        existing_user = User.objects.filter(
+            client=user.client,
+            id=contributor_id,
+        ).exists()
+        if not existing_user :
+            raise serializers.ValidationError("Référence contributeur incorrecte.")
+        
+        return data
+    
+
+class DeleteProjectContributorSerializer(serializers.ModelSerializer):
+
+
+    class Meta:
+        model = ProjectContributors
+        fields = ["contributor", "project"]
+
+    
+    def validate(self, data):
+
+        request = self.context.get('request')
+
+        if not request:
+            raise serializers.ValidationError("Object request manquant.")
+        else:
+            project_id = request.data.get('project')
+            contributor_id = request.data.get('contributor')
+            user = request.user
+
+        # Le projet doit exister dans les projets du client
+        existing_project = Project.objects.filter(
+            author__client=user.client,
+            id=project_id,
+        ).exists()
+        if not existing_project :
+            raise serializers.ValidationError("Référence projet incorrecte.")
+            
+        # Le contributeur ne doit pas être le dernier contributeur
+        number_contributor = ProjectContributors.objects.filter(
+            project_id=project_id,
+        ).count()
+        if number_contributor <= 1 :
+            raise serializers.ValidationError("Impossible de supprimer le dernier contributeur.")
+        
+        # Le contributeur doit être contributeur du projet
+        existing_contributor = ProjectContributors.objects.filter(
+            contributor_id=contributor_id,
+            project_id=project_id,
+        ).exists()
+        if not existing_contributor :
+            raise serializers.ValidationError("Contributeur non associé au projet.")
+        
+        return data
+    
+
+class ChangeIssuetAttributionSerializer(serializers.ModelSerializer):
+
+    attribution = serializers.PrimaryKeyRelatedField(queryset=User.objects.none())
+
+
+    class Meta:
+        model = Project
+        fields = ['attribution']
+
+    def validate(self, data):
+
+        request = self.context.get('request')
+
+        if not request:
+            raise serializers.ValidationError("Object request manquant.")
+        else:
+            project = self.instance
+            attribution_id = request.data.get('attribution')
+        
+        # L'utilisateur a qui est attribué le projet doit être contributeur du projet
+        existing_contributor = ProjectContributors.objects.filter(
+            contributor_id=attribution_id,
+            project_id=project.id,
+        ).exists()
+        if not existing_contributor :
+            raise serializers.ValidationError("Utilisateur attribué non associé au projet.")

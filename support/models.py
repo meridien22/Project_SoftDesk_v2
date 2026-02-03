@@ -13,6 +13,9 @@ class ActiveProjectManager(models.Manager):
 class Project(models.Model):
 
 
+    class Meta:
+        ordering = ['id']
+
     class Type(models.TextChoices):
         BACKEND = "Back-end"
         FRONTEND = "Front-end"
@@ -136,10 +139,12 @@ class Comment(models.Model):
 class ProjectContributors(models.Model):
     contributor = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        related_name = "project_links",
     )
     project = models.ForeignKey(
         Project,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        related_name = "contributor_links",
     )
     time_created = models.DateTimeField(auto_now_add=True)

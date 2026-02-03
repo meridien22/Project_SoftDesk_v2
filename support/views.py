@@ -66,20 +66,10 @@ class ProjectViewset(MultipleSerializerMixin, ReadOnlyModelViewSet):
         return queryset
 
 
-# class ProjectAPIView(APIView):
-
-#     def post(self, *args, **kwargs):
-#         serializer = ProjectListSerializer(data=request.data)
-#         if serializer.is_valid():
-#             serializer.save(author=request.user)
-#             return Response(serializer.data, status=201)
-#         return Response(serializer.errors, status=400)
-
-
 class AdminProjectViewset(ModelViewSet):
     
     serializer_class = ProjectListSerializer
-    permission_classes = [IsStaff]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
 

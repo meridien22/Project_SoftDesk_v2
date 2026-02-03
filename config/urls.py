@@ -10,8 +10,12 @@ from support.views import (
     AdminCommentViewset,
 )
 from authentication.views import (
-    UserAPIView,
+    UserInscriptionView,
     ProjectChangeAuthorView,
+    ProjectAddContributorView,
+    ProjectDeleteContributorView,
+    IssueChangeAuthorView,
+    UserUpdateView,
 )
 
 router = routers.SimpleRouter()
@@ -36,9 +40,13 @@ urlpatterns = [
     path('api-auth/', include('rest_framework.urls')),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('api/user/', UserAPIView.as_view(), name="user"),
+    path('api/user_inscription/', UserInscriptionView.as_view(), name="user_inscription"),
+    path('api/user_update/<int:user_id>/', UserUpdateView.as_view(), name="user_update"),
     path("api/", include(router.urls)),
     path('api/admin/capacity/<int:project_id>/project_change_author/', ProjectChangeAuthorView.as_view(), name='project_change_author'),
+    path('api/admin/capacity/<int:project_id>/project_add_contributor/', ProjectAddContributorView.as_view(), name='project_add_contributor'),
+    path('api/admin/capacity/<int:project_id>/project_delete_contributor/', ProjectDeleteContributorView.as_view(), name='project_delete_contributor'),
+    path('api/admin/capacity/<int:issue_id>/issue_change_attribution/',IssueChangeAuthorView.as_view(), name='issue_change_attribution'),
 
     # création d'un nouvel utilisateur => doit être authentifié en tant que is_staff
     # path("api/sign-up/", "", name=""),
