@@ -89,6 +89,15 @@ class Issue(models.Model):
         FINISHED = "Finished"
 
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['name', 'project'],
+                name='unique_issue_name_per_project'
+            )
+        ]
+
+
     name = models.CharField(max_length=128)
     description = models.CharField(max_length=2048, blank=True)
     priority = models.CharField(max_length=30, choices=Priority.choices)
@@ -117,6 +126,17 @@ class Issue(models.Model):
 
 
 class Comment(models.Model):
+
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['description', 'issue'],
+                name='unique_comment_name_per_issue'
+            )
+        ]
+    
+
     id = models.UUIDField(
         primary_key=True, 
         default=uuid.uuid4, 

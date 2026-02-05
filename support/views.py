@@ -4,8 +4,14 @@ from rest_framework.viewsets import (
 )
 from rest_framework import status
 from rest_framework.views import APIView
-from django.contrib.auth import get_user_model
 from rest_framework.response import Response
+from rest_framework.exceptions import (
+    ValidationError,
+)
+
+from django.contrib.auth import get_user_model
+from django.shortcuts import get_object_or_404
+
 from support.models import (
     Project,
     Comment,
@@ -15,17 +21,16 @@ from support.serializers import (
     ProjectDetailSerializer,
     ProjectListSerializer,
     IssueAdminSerializer,
-    CommentAdminSerializer
+    CommentAdminSerializer,
+    IssueSerializerResume,
+    CommentSerializer,
 )
 from support.permissions import (
     IsAuthenticated,
-    IsStaff
+    IsObjectAuthor,
+    IsProjectContributor,
 )
 
-from rest_framework.exceptions import (
-    ValidationError,
-    NotFound
-)
 
 UserModel = get_user_model()
 
@@ -51,6 +56,7 @@ class ProjectViewset(MultipleSerializerMixin, ReadOnlyModelViewSet):
         user = self.request.user
         queryset = Project.objects.filter(
             author__client=user.client,
+            author=user,
             contributors=user,
         ).distinct().prefetch_related(
             'contributors',
@@ -69,12 +75,12 @@ class ProjectViewset(MultipleSerializerMixin, ReadOnlyModelViewSet):
 class AdminProjectViewset(ModelViewSet):
     
     serializer_class = ProjectListSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsObjectAuthor]
 
     def get_queryset(self):
 
         user = self.request.user
-        queryset = Project.objects.filter(author__client=user.client)
+        queryset = Project.objects.filter(author=user)
         return queryset
     
     def perform_create(self, serializer):
@@ -91,7 +97,8 @@ class AdminProjectViewset(ModelViewSet):
 class AdminIssueViewset(ModelViewSet):
 
     serializer_class = IssueAdminSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsObjectAuthor]
+    http_method_names = ['get', 'post', 'patch', 'delete']
 
     def initial(self, request, *args, **kwargs):
         """Vérifie la présence de project selon l'action demandée."""
@@ -99,14 +106,11 @@ class AdminIssueViewset(ModelViewSet):
 
         if self.action == "list":
             if not request.query_params.get("project"):
-                raise ValidationError({
-                    "detail": "Le paramètre d'URL 'project' est requis pour lister les issues."
-                })
-        elif self.action in ["create", "update", "partial_update", "retrieve"]:
+                raise ValidationError({"detail": "Le paramètre d'URL 'project' est requis pour lister les issues."})
+        
+        elif self.action == "create":
             if 'project' not in request.data:
-                raise ValidationError({
-                    "project": "Ce champ est obligatoire dans le corps de la requête."
-                })
+                raise ValidationError({"project": "Ce champ est obligatoire dans le corps de la requête."})
 
     def get_queryset(self):
 
@@ -117,23 +121,21 @@ class AdminIssueViewset(ModelViewSet):
             project__is_active=True,
         )
 
-        project_id = (
-                    self.request.query_params.get('project') or 
-                    self.request.data.get('project')
-        )
-        if project_id:
+        if self.action == "list":
+            project_id = self.request.query_params.get('project')
             queryset = queryset.filter(project_id=project_id)
         
         return queryset
     
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
+        serializer.save(author=self.request.user, attribution=self.request.user)
 
 
 class AdminCommentViewset(ModelViewSet):
 
     serializer_class = CommentAdminSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsObjectAuthor]
+    http_method_names = ['get', 'post', 'patch', 'delete']
 
     def initial(self, request, *args, **kwargs):
         """Vérifie la présence de issue selon l'action demandée."""
@@ -141,14 +143,11 @@ class AdminCommentViewset(ModelViewSet):
 
         if self.action == "list":
             if not request.query_params.get("issue"):
-                raise ValidationError({
-                    "detail": "Le paramètre d'URL 'issue' est requis pour lister les commentaires."
-                })
-        elif self.action in ["create", "update", "partial_update", "retrieve"]:
+                raise ValidationError({"detail": "Le paramètre d'URL 'issue' est requis pour lister les commentaires."})
+        
+        elif self.action == "create":
             if 'issue' not in request.data:
-                raise ValidationError({
-                    "issue": "Ce champ est obligatoire dans le corps de la requête."
-                })
+                raise ValidationError({"issue": "Ce champ est obligatoire dans le corps de la requête."})
             
     def get_queryset(self):
 
@@ -159,14 +158,37 @@ class AdminCommentViewset(ModelViewSet):
             issue__project__is_active=True,
         )
 
-        issue_id = (
-                    self.request.query_params.get('issue') or 
-                    self.request.data.get('issue')
-        )
-        if issue_id:
+        if self.action == "list":
+            issue_id = self.request.query_params.get('issue')
             queryset = queryset.filter(issue_id=issue_id)
         
         return queryset
     
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
+
+
+class ProjectIssuesView(APIView):
+    
+    permission_classes = [IsAuthenticated, IsProjectContributor]
+
+    def get(self, request, project_id):
+        project = get_object_or_404(Project, id=project_id)
+        self.check_object_permissions(request, project)
+        issues = Issue.objects.filter(project_id=project_id)
+        serializer = IssueSerializerResume(issues, many=True)
+        return Response(serializer.data)
+
+
+class IssueCommentsView(APIView):
+
+    permission_classes = [IsAuthenticated, IsProjectContributor]
+
+    def get(self, request, issue_id):
+        issue = get_object_or_404(Issue, id=issue_id)
+        project = issue.project
+        self.check_object_permissions(request, project)
+        comments = Comment.objects.filter(issue_id=issue_id)
+        serializer = CommentSerializer(comments, many=True)
+        return Response(serializer.data)
+

@@ -8,6 +8,8 @@ from support.views import (
     AdminProjectViewset,
     AdminIssueViewset,
     AdminCommentViewset,
+    ProjectIssuesView,
+    IssueCommentsView,
 )
 from authentication.views import (
     UserInscriptionView,
@@ -16,6 +18,9 @@ from authentication.views import (
     ProjectDeleteContributorView,
     IssueChangeAuthorView,
     UserUpdateView,
+    UserDeleteView,
+    IssueChangeAuthorView,
+    CommentChangeAuthorView,
 )
 
 router = routers.SimpleRouter()
@@ -42,11 +47,16 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/user_inscription/', UserInscriptionView.as_view(), name="user_inscription"),
     path('api/user_update/<int:user_id>/', UserUpdateView.as_view(), name="user_update"),
+    path('api/user_delete/<int:user_id>/', UserDeleteView.as_view(), name="user_delete"),
     path("api/", include(router.urls)),
     path('api/admin/capacity/<int:project_id>/project_change_author/', ProjectChangeAuthorView.as_view(), name='project_change_author'),
+    path('api/admin/capacity/<int:issue_id>/issue_change_author/', IssueChangeAuthorView.as_view(), name='issue_change_author'),
+    path('api/admin/capacity/<int:comment_id>/comment_change_author/', CommentChangeAuthorView.as_view(), name='comment_change_author'),
     path('api/admin/capacity/<int:project_id>/project_add_contributor/', ProjectAddContributorView.as_view(), name='project_add_contributor'),
     path('api/admin/capacity/<int:project_id>/project_delete_contributor/', ProjectDeleteContributorView.as_view(), name='project_delete_contributor'),
     path('api/admin/capacity/<int:issue_id>/issue_change_attribution/',IssueChangeAuthorView.as_view(), name='issue_change_attribution'),
+    path('api/project/<int:project_id>/issues/', ProjectIssuesView.as_view(), name='project_issues'),
+    path('api/issue/<int:issue_id>/comments/', IssueCommentsView.as_view(), name='issue_comments'),
 
     # création d'un nouvel utilisateur => doit être authentifié en tant que is_staff
     # path("api/sign-up/", "", name=""),

@@ -2,7 +2,7 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from authentication.models import User
-from support.models import Project, ProjectContributors
+from support.models import Project, ProjectContributors, Issue, Comment
 from authentication.validators import MinAgeValidator
 
 from datetime import date
@@ -70,9 +70,6 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         ]
 
 
-    
-    
-
 class ChangeProjectAuthorSerializer(serializers.ModelSerializer):
 
     author = serializers.PrimaryKeyRelatedField(queryset=User.objects.none())
@@ -90,6 +87,40 @@ class ChangeProjectAuthorSerializer(serializers.ModelSerializer):
             self.fields['author'].queryset = User.objects.filter(
                 client=request.user.client
             )
+
+
+class ChangeIssueAuthorSerializer(serializers.ModelSerializer):
+
+    author = serializers.PrimaryKeyRelatedField(queryset=User.objects.none())
+
+
+    class Meta:
+        model = Issue
+        fields = ['author']
+
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        issue = self.instance
+        project = issue.project
+        self.fields['author'].queryset = project.contributors.all()
+
+
+class ChangeCommentAuthorSerializer(serializers.ModelSerializer):
+
+    author = serializers.PrimaryKeyRelatedField(queryset=User.objects.none())
+
+
+    class Meta:
+        model = Comment
+        fields = ['author']
+
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        comment = self.instance
+        project = comment.issue.project
+        self.fields['author'].queryset = project.contributors.all()
 
 
 class AddProjectContributorSerializer(serializers.ModelSerializer):
