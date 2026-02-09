@@ -11,6 +11,7 @@ from rest_framework.exceptions import (
 
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
+from django.db.models import Q
 
 from support.models import (
     Project,
@@ -56,8 +57,8 @@ class ProjectViewset(MultipleSerializerMixin, ReadOnlyModelViewSet):
         user = self.request.user
         queryset = Project.objects.filter(
             author__client=user.client,
-            author=user,
-            contributors=user,
+        ).filter(
+            Q(author=user) | Q(contributors=user)
         ).distinct().prefetch_related(
             'contributors',
             'issues__comments',

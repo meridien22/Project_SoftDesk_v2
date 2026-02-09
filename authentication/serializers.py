@@ -1,6 +1,7 @@
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from django.shortcuts import get_object_or_404
 from authentication.models import User
 from support.models import Project, ProjectContributors, Issue, Comment
 from authentication.validators import MinAgeValidator
@@ -20,6 +21,7 @@ class UserInputSerializer(serializers.ModelSerializer):
 
         model = UserModel
         fields = [
+            "id",
             "username",
             "password",
             "date_birth",
@@ -149,6 +151,14 @@ class AddProjectContributorSerializer(serializers.ModelSerializer):
         ).exists()
         if not existing_project :
             raise serializers.ValidationError("Référence projet incorrecte.")
+        
+        # L'utilisateur doit être auteur du projet ou membre du staff
+        is_author = Project.objects.filter(
+            id=project_id,
+            author=user,
+        ).exists()
+        if not is_author and not user.is_staff:
+            raise serializers.ValidationError("L'utilisateur n'est pas auteur du projet.")
             
         # Le contributeur ne doit pas déjà être contributeur du projet
         existing_contributor = ProjectContributors.objects.filter(
@@ -240,3 +250,11 @@ class ChangeIssuetAttributionSerializer(serializers.ModelSerializer):
         ).exists()
         if not existing_contributor :
             raise serializers.ValidationError("Utilisateur attribué non associé au projet.")
+
+
+class UpgradeUserSerializer(serializers.ModelSerializer):
+
+
+    class Meta:
+        model = UserModel
+        fields = ['is_staff']

@@ -25,3 +25,5 @@ poetry run python manage.py startapp support
 
 <!-- # Pour lancer la commande de management qui va créer un jeu de donnée pour le développement locel -->
 poetry run python manage.py init_local_dev
+
+poetry run python manage.py erase_local_dev

@@ -5,7 +5,13 @@ class IsAuthenticated(BasePermission):
 
     def has_permission(self, request, view):
         return bool(request.user.is_authenticated)
-    
+
+
+class IsSuperUser(BasePermission):
+
+    def has_permission(self, request, view):
+        return bool(request.user.is_authenticated and request.user.is_superuser)
+
 
 class IsStaff(BasePermission):
 
@@ -25,7 +31,9 @@ class IsObjectAuthor(BasePermission):
 # qui concernent un seul objet (retrieve, update, partial_update, destroy).
 
     def has_object_permission(self, request, view, obj):
-        return obj.author == request.user
+        print("--------------------------")
+        return bool(obj.author == request.user
+                    or request.user.is_staff)
     
 
 class IsProjectContributor(BasePermission):
