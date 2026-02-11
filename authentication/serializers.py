@@ -6,6 +6,8 @@ from authentication.models import User
 from support.models import Project, ProjectContributors, Issue, Comment
 from authentication.validators import MinAgeValidator
 
+from client.models import Client
+
 from datetime import date
 
 UserModel = get_user_model()
@@ -25,10 +27,11 @@ class UserInputSerializer(serializers.ModelSerializer):
             "username",
             "password",
             "date_birth",
-            "client",
             "can_be_contacted",
             "can_data_be_collected",
             "can_data_be_shared",
+            "email",
+
         ]
         extra_kwargs = {
             # En sortie (Lecture) : Lorsque l'API renvoie les informations de
@@ -40,9 +43,15 @@ class UserInputSerializer(serializers.ModelSerializer):
         }
 
 
+    def validate_email(self, value):
+        domain = value.split('@')[-1].lower()
+        if not Client.objects.filter(domain=domain).exists():
+            raise serializers.ValidationError("Domaine non autorisé.")
+        return value
+    
     def create(self, validated_data):
-        # utiliser create_user au lieu de create permet de hacher le mot de passe
-        return User.objects.create_user(**validated_data)
+            # On appelle explicitement create_user du manager
+            return UserModel.objects.create_user(**validated_data)
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):

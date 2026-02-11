@@ -11,7 +11,7 @@ from rest_framework.exceptions import (
 
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
-from django.db.models import Q
+from django.db.models import Q, Count
 
 from support.models import (
     Project,
@@ -63,7 +63,9 @@ class ProjectViewset(MultipleSerializerMixin, ReadOnlyModelViewSet):
             'contributors',
             'issues__comments',
             'issues__comments__author'
-        )
+        ).annotate(
+            total_issues=Count('issues')
+        ).order_by('-time_created')
 
         type = self.request.query_params.get('type')
 
@@ -129,7 +131,7 @@ class AdminIssueViewset(ModelViewSet):
         return queryset
     
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user, attribution=self.request.user)
+        serializer.save(author=self.request.user)
 
 
 class AdminCommentViewset(ModelViewSet):

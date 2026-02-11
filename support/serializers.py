@@ -105,7 +105,6 @@ class CommentAdminSerializer(serializers.ModelSerializer):
         return value   
 
 
-
 class IssueAdminSerializer(serializers.ModelSerializer):
 
 
@@ -119,6 +118,7 @@ class IssueAdminSerializer(serializers.ModelSerializer):
             "balise",
             "progression",
             "project",
+            "attribution",
         ]
 
 
@@ -145,6 +145,8 @@ class IssueAdminSerializer(serializers.ModelSerializer):
 
 class ProjectListSerializer(serializers.ModelSerializer):
 
+    issues_count = serializers.IntegerField(source='total_issues', read_only=True)
+
     class Meta:
         model = Project
         fields = [
@@ -152,6 +154,7 @@ class ProjectListSerializer(serializers.ModelSerializer):
             "name",
             "description",
             "type",
+            "issues_count",
         ]
 
     # Pour un même client, un projet ne peut pas avoir 2 fois le même nom
