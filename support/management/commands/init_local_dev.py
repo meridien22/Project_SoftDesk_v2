@@ -230,7 +230,7 @@ class Command(BaseCommand):
 
     super_user = UserModel.objects.create_superuser(
         username="meridien",
-        password='meridien22',
+        password='xxxxxxxxx',
         date_birth="1990-01-01",
         client=client_objects[0],
     )
