@@ -16,3 +16,5 @@ Etapes à suivre pour installer localement l'application :
     * `poetry run python manage.py runserver`
 6. **Tester cette URL dans votre navigareur pour valider l'installation**
     * `http://127.0.0.1:8000/api/user_inscription/`
+
+![install ok](/image/install_ok.png)
