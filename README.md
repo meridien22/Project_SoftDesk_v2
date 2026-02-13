@@ -1,27 +1,18 @@
-# Force Poetry à créer le dossier .venv à l'intérieur de votre projet
-poetry config virtualenvs.in-project true
-# créer notre nouveau projet
-poetry new poetry_project
-# Ajoute Django aux dépendances de production
-poetry add django
-poetry add djangorestframework-simplejwt
-# Ajoute Django aux dépendances de production
-poetry add djangorestframework
-# Ajoute des outils de développement
-poetry add --group dev black flake8
-# le paramètre config permet de nommer le répertoire de configuration du projet autrement que le nom du projet lui-même
-# le paramètre . permet de faire l'installation dans le répertpire courant sans en créer un nouveau
-poetry run django-admin startproject config .
+# # SoftDesk Support
 
+SoftDesk, une société d'édition de logiciels de collaboration, a décidé de publier une application permettant de remonter et suivre des problèmes techniques. Cette solution, SoftDesk Support, s’adresse à des entreprises en B2B (Business to Business).
 
+Etapes à suivre pour installer localement l'application :
 
-
-# Pour la suite
-poetry run python manage.py migrate
-
-
-poetry run python manage.py startapp authentication
-poetry run python manage.py startapp support
-
-<!-- # Pour lancer la commande de management qui va créer un jeu de donnée pour le développement locel -->
-poetry run python manage.py init_local_dev_v2
+1. **Cloner le repository GitHuh du projet**
+    * `git clone https://github.com/meridien22/Project_SoftDesk_v2.git`
+2. **Aller dans le répsertoire du projet**
+    * `cd Project_SoftDesk_v2/`
+3. **Si vous n'avez pas poetry sur votre machine, installez-le avec cette commande**
+    * `curl -sSL https://install.python-poetry.org | python3 -`
+4. **Créer l'environnement virtuel et installer les bilbiothèques**
+    * `poetry install`
+5. **Lancer le serveur Django**
+    * `poetry run python manage.py runserver`
+6. **Tester cette URL dans votre navigareur pour valider l'installation**
+    * `http://127.0.0.1:8000/api/user_inscription/`
